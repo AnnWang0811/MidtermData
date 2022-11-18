@@ -1,0 +1,94 @@
+#inport modules
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+df = pd.read_csv("https://raw.githubusercontent.com/AnnWang0811/MidtermData/main/midterm_train.csv")
+
+df.head()
+df.info()
+
+df.drop(['HomePlanet', 'Cabin', 'Destination', 'Name'], axis = 1, inplace = True)
+
+"""
+df['CryoSleep'].value_counts()
+df['VIP'].value_counts()
+df['Transported'].value_counts()
+"""
+
+#Transported dummy
+df = pd.get_dummies(data = df, columns=['Transported'])
+df.head()
+df.drop('Transported_False', axis = 1, inplace = True)
+
+#CryoSleep dummy
+df['CryoSleep'].fillna(df['CryoSleep'].value_counts().idxmax(), inplace = True)
+df = pd.get_dummies(data = df, columns=['CryoSleep'])
+df.drop('CryoSleep_False', axis = 1, inplace = True)
+
+#VIP dummy
+df['VIP'].fillna(df['VIP'].value_counts().idxmax(), inplace = True)
+df = pd.get_dummies(data = df, columns=['VIP'])
+df.drop('VIP_False', axis = 1, inplace = True)
+
+#Age missing value
+df['Age'] = df.groupby(['VIP_True'])['Age'].apply(lambda x: x.fillna(x.median()))
+#df.groupby(['Transported_True']).median()
+#df.groupby('Transported_True')['Age'].apply(lambda x: x.fillna(x.median()))
+#df.groupby('Transported_True')['Age'].median()
+
+#df.groupby('VIP_True').mean()
+
+#compare
+sns.pairplot(df[['Transported_True', 'CryoSleep_True']], dropna=True)
+sns.pairplot(df[['Transported_True', 'VIP_True']], dropna=True)
+sns.pairplot(df[['Age', 'VIP_True']], dropna=True)
+
+
+#RoomService missing value
+df['RoomService'] = df.groupby(['VIP_True'])['RoomService'].apply(lambda x: x.fillna(x.median()))
+
+#FoodCourt
+df['FoodCourt'] = df.groupby(['VIP_True'])['FoodCourt'].apply(lambda x: x.fillna(x.median()))
+
+#ShoppingMall
+df['ShoppingMall'] = df.groupby(['VIP_True'])['ShoppingMall'].apply(lambda x: x.fillna(x.median()))
+
+#Spa
+df['Spa'] = df.groupby(['VIP_True'])['Spa'].apply(lambda x: x.fillna(x.median()))
+
+#VRDeck
+df['VRDeck'] = df.groupby(['VIP_True'])['VRDeck'].apply(lambda x: x.fillna(x.median()))
+
+'''
+#RoomService
+
+#compare
+#df.drop(['PassengerId', 'HomePlanet', 'Cabin', 'Destination', 'Name'], axis = 1, inplace = True)
+df.groupby('Transported_True').mean()
+sns.pairplot(df[['CryoSleep', 'Transported_True']], dropna=True)
+sns.pairplot(df[['VRDeck', 'Transported_True']], dropna=True)
+'''
+
+df.corr()
+X = df.drop(['Transported_True'], axis = 1)
+y = df['Transported_True']
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.3, random_state = 67)
+
+from sklearn.linear_model import LogisticRegression
+lr = LogisticRegression()
+lr.fit(X_train, y_train)
+predictions = lr.predict(X_test)
+
+from sklearn.metrics import confusion_matrix, accuracy_score, recall_score, precision_score
+accuracy_score(y_test, predictions)
+recall_score(y_test, predictions)
+precision_score(y_test, predictions)
+
+pd.DataFrame(confusion_matrix(y_test, predictions), columns=['Predict not Transported', 'Predict Transported'], index = ['True not Transported', 'True Taransported'])
+
+import joblib
+joblib.dump(lr,'Midterm-LR-YYYYMMDD.pkl',compress=3)
